@@ -198,5 +198,7 @@ openssl rsa -in server.pem -out server_unencrypted.pem
 
 [关于抓包工具Wireshark使用](https://blog.csdn.net/qq_39720249/article/details/128157288)
 
+[基于TCP的四次挥手调用shutdown和close函数区别](https://blog.csdn.net/SteveForever/article/details/140638476)
+
 
 
