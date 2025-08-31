@@ -68,6 +68,7 @@ struct Channel
         ev.data.ptr = this;
         log("modifying fd %d events read %d write %d\n",
             fd_, ev.events & EPOLLIN, ev.events & EPOLLOUT);
+        // 服务端采用epoll来监听
         int r = epoll_ctl(epollfd, EPOLL_CTL_MOD, fd_, &ev);
         check0(r, "epoll_ctl mod failed %d %s", errno, strerror(errno));
     }
@@ -96,7 +97,7 @@ int setNonBlock(int fd, bool value)
     }
     return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
 }
-
+// 向epoll上添加监听事件fd
 void addEpollFd(int epollfd, Channel *ch)
 {
     struct epoll_event ev;
@@ -137,6 +138,8 @@ void handleAccept()
     {
         sockaddr_in peer, local;
         socklen_t alen = sizeof(peer);
+
+        // 获得对端主机的IP地址本地IP地址
         int r = getpeername(cfd, (sockaddr *)&peer, &alen);
         if (r < 0)
         {
@@ -185,7 +188,7 @@ void handleHandshake(Channel *ch)
         check0(!r, "SSL_set_fd failed");
         log("SSL_set_accept_state for fd %d\n", ch->fd_);
         // SSL_set_accept_state(ch->ssl_);
-        r = SSL_accept(ssl);
+        r = SSL_accept(ch->ssl);
         if (r <= 0)
         {
             int err = SSL_get_error(ssl, r);

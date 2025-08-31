@@ -53,6 +53,7 @@ struct SSLCon
     }
 };
 
+// 设置连接为非阻塞
 int setNonBlock(int fd, bool value)
 {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -73,7 +74,9 @@ int tcpConnect(const char *svr, short port)
     struct hostent *host = gethostbyname(svr);
     int handle = socket(AF_INET, SOCK_STREAM, 0);
     check1(handle >= 0, "socket return error");
+
     setNonBlock(handle, true);
+
     struct sockaddr_in server;
     bzero(&server, sizeof server);
     server.sin_family = AF_INET;
@@ -83,14 +86,18 @@ int tcpConnect(const char *svr, short port)
     log("connecting to %s %d\n", svr, port);
     int r = connect(handle, (struct sockaddr *)&server,
                     sizeof(struct sockaddr));
+
     if (r < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
     {
+        // 数据未就绪，需稍后重试
         struct pollfd pfd;
         pfd.fd = handle;
-        pfd.events = POLLOUT | POLLERR;
+        pfd.events = POLLOUT | POLLERR; // 监控可写或错误事件
+        // 注册到poll中
         while (r == 0)
         {
-            r = poll(&pfd, 1, 100);
+            // 等待连接完成，监控1个文件描述符，阻塞超时时间100（毫秒）
+            r = poll(&pfd, 1, 100); // 返回值是就绪的文件描述符数量
         }
         check1(pfd.revents == POLLOUT, "poll return error events: %d", pfd.revents);
     }
@@ -110,25 +117,29 @@ void sslConnect(SSLCon *con, const char *host, short port)
         ERR_print_errors_fp(stderr);
         check1(0, "SSL_new failed");
     }
-
+    // 关联SSL和socket fd
     if (!SSL_set_fd(con->sslHandle, con->socket))
     {
         ERR_print_errors_fp(stderr);
         check1(0, "SSL_set_fd failed");
     }
 
-    SSL_set_connect_state(con->sslHandle);
     int r = 0;
     int events = POLLIN | POLLOUT | POLLERR;
-    while ((r = SSL_do_handshake(con->sslHandle)) != 1)
+    // 开始握手
+    // SSL_set_connect_state(con->sslHandle);    // 设置为客户端模式
+    // while ((r = SSL_do_handshake(con->sslHandle)) != 1)
+    // 使用SSL_connect代替
+    while ((r = SSL_connect(con->sslHandle)) != 1)
     {
         int err = SSL_get_error(con->sslHandle, r);
+        // 只监听可写事件
         if (err == SSL_ERROR_WANT_WRITE)
         {
             events |= POLLOUT;
             events &= ~POLLIN;
             log("return want write set events %d\n", events);
-        }
+        } // 只监听可读事件
         else if (err == SSL_ERROR_WANT_READ)
         {
             events |= EPOLLIN;
@@ -146,7 +157,7 @@ void sslConnect(SSLCon *con, const char *host, short port)
         pfd.events = events;
         do
         {
-            r = poll(&pfd, 1, 100);
+            r = poll(&pfd, 1, 100); // 等待socket就绪
         } while (r == 0);
         check1(r == 1, "poll return %d error events: %d errno %d %s\n", r, pfd.revents, errno, strerror(errno));
     }
@@ -165,12 +176,14 @@ void sslRead(SSLCon *con)
         struct pollfd pfd;
         pfd.fd = con->socket;
         pfd.events = POLLIN;
+        // 不管的监听该事件
         do
         {
-            r = poll(&pfd, 1, 100);
+            r = poll(&pfd, 1, 100); // 等待数据到达
         } while (r == 0);
-
+        // 读取来自服务端的数据
         r = SSL_read(con->sslHandle, buf + rd, sizeof buf - rd);
+        // 读取失败
         if (r < 0)
         {
             int err = SSL_get_error(con->sslHandle, r);
