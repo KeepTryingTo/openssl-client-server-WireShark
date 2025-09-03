@@ -8,6 +8,10 @@ openssl req -new -key server.key -out server.csr -subj "/C=CN/ST=Beijing/L=Beiji
 
 # 自签名证书（有效期10年）
 openssl x509 -req -days 3650 -in server.csr -signkey server.key -out server.crt
+
+# 2. 设置证书权限
+chmod 600 server.key
+chmod 644 server.crt
 ```
 
 # 编译（需要链接OpenSSL库）
