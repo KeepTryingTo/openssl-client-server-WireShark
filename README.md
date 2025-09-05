@@ -11,6 +11,8 @@
 compile
 =================
 ```
+OpenSSL VERSION OpenSSL 1.0.2p  14 Aug 2018
+
 测试一：基于TCP协议的简单消息传输
 cd simple_client_server
 make
