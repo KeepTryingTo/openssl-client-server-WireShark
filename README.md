@@ -133,6 +133,13 @@ openssl x509 -in cert.pem -noout -text
 |-noout	          | 不输出证书本身（只输出解析信息） |
 |-text	          |  以可读格式显示完整证书信息     |
 
+### 私钥和证书授权
+```
+# 2. 设置证书权限
+chmod 600 server.key
+chmod 644 server.crt
+```
+
 ### 验证密钥与证书是否匹配
 ```
 验证密钥与证书是否匹配
