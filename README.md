@@ -8,6 +8,8 @@
 
 [本项目cpp-ssl-client-server代码来源3](https://github.com/youngyangyang04/Kama-HTTPServer)
 
+[项目讲解](https://mydreamambitious.blog.csdn.net/article/details/150961257?spm=1011.2415.3001.5331)
+
 compile
 =================
 ```
